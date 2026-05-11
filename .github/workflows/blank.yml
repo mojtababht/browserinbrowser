@@ -22,35 +22,23 @@ jobs:
           lscr.io/linuxserver/chromium:latest
           sleep 5
 
-      - name: Install cloudflared
+      - name: Install ngrok
         run: |
-          curl -L --output cloudflared.deb https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
-          sudo dpkg -i cloudflared.deb
+          curl -sSL https://ngrok-agent.s3.amazonaws.com/ngrok.asc \
+            | sudo tee /etc/apt/trusted.gpg.d/ngrok.asc >/dev/null \
+            && echo "deb https://ngrok-agent.s3.amazonaws.com bookworm main" \
+            | sudo tee /etc/apt/sources.list.d/ngrok.list \
+            && sudo apt update \
+            && sudo apt install ngrok
+          ngrok config add-authtoken ${{ secrets.NGROK_AUTH_TOKEN }}
 
-      - name: Start quick tunnel and display URL
+      - name: Start ngrok and capture URL
+        id: expose
         run: |
-          # Start tunnel
-          cloudflared tunnel --url http://localhost:3000 2>&1 | tee tunnel.log &
-          TUNNEL_PID=$!
-          
-          # Wait for tunnel to establish
-          sleep 10
-          
-          # Extract URL from logs
-          URL=$(grep -o 'https://[a-zA-Z0-9.-]*\.trycloudflare\.com' tunnel.log | head -1)
-          
-          # Save URL for later steps
-          echo "TUNNEL_URL=$URL" >> $GITHUB_ENV
-          
-          echo "========================================="
-          echo "✅ BROWSER ACTIVE"
-          echo "========================================="
-          echo "🔗 BROWSER_URL: $URL"
-          echo "========================================="
-          echo ""
-          echo "⏰ Browser running for 6 hours"
-          echo ""
-
+          ngrok http 3000 --log=stdout > ngrok.log &
+          sleep 5
+          URL=$(curl -s http://localhost:4040/api/tunnels | python3 -c "import sys,json;print(json.load(sys.stdin)['tunnels'][0]['public_url'])")
+          echo "TUNNEL_URL=$URL" >> $GITHUB_OUTPUT
           sleep 21000
 
       - name: Cleanup
