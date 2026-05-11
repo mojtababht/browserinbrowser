@@ -10,7 +10,16 @@ jobs:
     steps:
       - name: Start browserless-node
         run: |
-          docker run -d --restart=unless-stopped --name browserless -p 3000:3000 browserless/chrome
+          docker run -d \
+          --name mini-browser \
+          -p 3000:3000 \
+          -e PUID=1000 \
+          -e PGID=1000 \
+          -e TZ=Etc/UTC \
+          -e CHROME_CLI=https://google.com/ \
+          --shm-size="1gb" \
+          --restart unless-stopped \
+          lscr.io/linuxserver/chromium:latest
           sleep 5
 
       - name: Install cloudflared
@@ -47,5 +56,5 @@ jobs:
       - name: Cleanup
         if: always()
         run: |
-          docker stop browserless || true
+          docker stop mini-browser || true
           pkill cloudflared || true
