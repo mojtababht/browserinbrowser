@@ -8,7 +8,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 360
     steps:
-      - name: Start mhrv-tunnel-node
+      - name: Start browserless-node
         run: |
           docker run -d --restart=unless-stopped --name browserless -p 3000:3000 browserless/chrome
           sleep 5
@@ -41,3 +41,11 @@ jobs:
           echo ""
           echo "⏰ Browser running for 6 hours"
           echo ""
+
+          sleep 21000
+
+      - name: Cleanup
+        if: always()
+        run: |
+          docker stop browserless || true
+          pkill cloudflared || true
